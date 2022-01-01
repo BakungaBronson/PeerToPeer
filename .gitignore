@@ -1,0 +1,5 @@
+# Do not upload config files
+config.ini
+
+# Do not upload pycache
+__pycache__
