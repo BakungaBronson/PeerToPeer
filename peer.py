@@ -51,7 +51,8 @@ def main():
         def run(self):
             listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            listen_socket.bind((LOCALHOST, self.port))
+            # Set the ip and port
+            listen_socket.bind((self.address, self.port))
             listen_socket.listen(5)
 
             while True:
