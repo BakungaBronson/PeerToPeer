@@ -16,6 +16,7 @@ def main():
         def __init__(self):
             threading.Thread.__init__(self)
             self.port = None
+            self.address = None
             print("❕ Initialising ❕")
             try:
                 # Read config.ini file
@@ -82,7 +83,7 @@ def main():
         def run(self):
             send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             send_socket.connect((self.address, self.port))
-
+            print("✔️ Connected. Enter Command Below or Enter quit to exit and connect to another node ✔️")
             while True:
 
                 message = input()
