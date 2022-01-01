@@ -17,7 +17,6 @@ def main():
         def __init__(self):
             threading.Thread.__init__(self)
             self.port = None
-            self.address = None
 
             # The Hashtable that will store the keys and values, it has a maximum of 10 
             # buckets where it can store data
@@ -52,7 +51,7 @@ def main():
             listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             # Set the ip and port
-            listen_socket.bind((self.address, self.port))
+            listen_socket.bind(('', self.port))
             listen_socket.listen(5)
 
             while True:
