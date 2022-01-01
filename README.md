@@ -4,10 +4,10 @@ This project is meant to connect multiple peers across a network and enable file
 ## Project Members
 All credit goes to the people below for the work and effort put into making this system a reality.
 
-# Opio Andrew         18/U/21104/PS
-# Nakagwe Sharifah    18/U/21144/PS
-# Bakunga Bronson     18/U/23411/EVE
-# Katusiime Conrad    18/U/855
++ Opio Andrew         18/U/21104/PS
++ Nakagwe Sharifah    18/U/21144/PS
++ Bakunga Bronson     18/U/23411/EVE
++ Katusiime Conrad    18/U/855
 
 ## Operation
 Run peer.py
@@ -20,7 +20,11 @@ For now the program runs on a machine's localhost (127.0.0.1) but it will be set
 The port that the peer is listening on is what we can use to connect another node to this one we are running and vice versa. Once a connection is established, the peer that connected can send a message to the other peer. We can use "quit" to stop a connection at any time incase we want to connect to another peer. The peer where the message is sent prints it out for now but it is supposed to perform a function on receiving a certain message and return the result to the other node.
 
 # Illustration
+![image](https://user-images.githubusercontent.com/51344005/147847562-2f01f116-c160-465e-b69d-61a99441b7c3.png)
+*Red Arrow* The listening port we have on the other peer is what we connect to on the second peer.
 
-## Endind Program
+*Blue Arrow* The user can still enter the host and port on the other machine even when someone connects to them.
+
+## Ending Program
 For now the only way to end the program is to end the terminal running the program. That will be changes as we go.
 
