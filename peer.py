@@ -4,6 +4,7 @@ import random
 import sys
 import uuid
 from configparser import ConfigParser
+from hash_table import Hashtable
 
 LOCALHOST = '127.0.0.1'
 BUFFER_SIZE = 2048
@@ -17,6 +18,11 @@ def main():
             threading.Thread.__init__(self)
             self.port = None
             self.address = None
+
+            # The Hashtable that will store the keys and values, it has a maximum of 10 
+            # buckets where it can store data
+            self.table = Hashtable(10)
+
             print("❕ Initialising ❕")
             try:
                 # Read config.ini file
@@ -66,6 +72,8 @@ def main():
                 if message:
                     buffer += message
                     print(clientsock.getpeername(), "::: ", buffer)
+                    if buffer == "SEARCH" or buffer == "search":
+                        print("Searching for file...")
                 else:
                     break
 
