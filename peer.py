@@ -3,23 +3,25 @@ import threading
 import random
 import time
 import sys
+import os
+import json
+import tqdm
 import uuid
 from configparser import ConfigParser
-from hash_table import Hashtable
 
 LOCALHOST = '127.0.0.1'
 BUFFER_SIZE = 2048
 MAX_PEERS = 5
-BROADCAST_PORT = 54600
+BROADCAST_PORT = 64700
 
 def main():
     running = 0
     global unique_id
     unique_id = None
     global peer_table
-    peer_table = Hashtable(MAX_PEERS)
+    peer_table = []
     global files
-    files = Hashtable(10)
+    files = {}
     global IPAddr
     IPAddr = None
     global MYPORT
@@ -55,50 +57,143 @@ def main():
                 data = ''
 
                 try:
-                    buffer, addr = listener.recvfrom(2048)
+                    buffer, addr = listener.recvfrom(BUFFER_SIZE)
                     data += str(buffer, "utf-8")
                 except:
                     pass
 
                 if data:
-                    print("BROADCAST::: %s" % data)
+
                     response = data.split()
+                    if response[0].lower() == "check" or response[0].lower() == "search":
+                        pass
+                    else:
+                        print("BROADCAST::: %s" % data)
                     
                     if len(response) > 1:
                         if response[0].lower() == "check":
-                            resp, index = peer_table._search(response[1])
-                            print(resp, index)
+                            if response[1] in peer_table:
+                                resp = True
+                            else:
+                                resp = False
+
                             if resp:
                                 
                                 print("✔️ MATCH FOUND ✔️")
 
+                                if response[1] in files.keys():
+                                    for piece in files[response[1]]:
+                                        # Create socket to send the files
+                                        send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                        send_socket.connect((response[2], int(response[3])))                              
+                                        # Send file details
+                                        filesize = os.path.getsize(piece)
+                                        message = "FILE {} {} {}".format(piece, filesize, response[1])
+                                        try:
+                                            send_socket.sendall(bytes(message, 'utf-8'))
+                                            print("🚀🔥Fire Away🔥🚀")
+
+                                            # Send file data
+                                            # sendfile(filesize, piece, send_socket)
+                                            progress = tqdm.tqdm(range(filesize), f"Sending {piece}", unit="B", unit_scale=True, unit_divisor=1024)
+                                            with open (piece, 'rb') as source:
+                                                while(True):
+                                                    # read the bytes from the file
+                                                    bytes_read = source.read(BUFFER_SIZE)
+                                                    if not bytes_read:
+                                                        # file transmitting is done
+                                                        break
+                                                    # we use sendall to assure transimission in 
+                                                    # busy networks
+                                                    send_socket.sendall(bytes_read)
+                                                    # update the progress bar
+                                                    progress.update(len(bytes_read))
+                                            send_socket.close()
+
+                                            data = ''
+                                        except:
+                                            Exception
+                                else:
+                                    print("❕ Peer Has No Files Stored ❕")
+
+                        elif response[0].lower() == "appear":
+                            if response[1] == unique_id:
                                 send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                                send_socket.connect((response[2], int(response[3])))
-                                message = "❕ Sending files ❕"
+                                send_socket.connect((response[2], int(response[3]))) 
+                                message = "HERE {} {} {}".format(unique_id, IPAddr, MYPORT)
                                 try:
                                     send_socket.sendall(bytes(message, 'utf-8'))
                                     print("🚀🔥Fire Away🔥🚀")
+                                    
+                                    send_socket.close()
                                     data = ''
                                 except:
                                     Exception
+
                         elif response[0].lower() == "search":
-                            resp, index = files._search(response[1])
-                            print(resp, index)
+                            for folder in files.values():
+                                if response[1] in folder:
+                                    resp = True
+                                    break
+                                else:
+                                    resp = False
+
                             if resp:
                                 
                                 print("✔️ FILE RECORD FOUND ✔️")
-
+                                # Create socket to send the files
                                 send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                                 send_socket.connect((response[2], int(response[3])))
-                                message = "❕ Sending files ❕"
+
+                                # Send file details
+                                filesize = os.path.getsize(response[1])
+                                message = "FILE {} {} {}".format(response[1], filesize, unique_id)
+
                                 try:
                                     send_socket.sendall(bytes(message, 'utf-8'))
                                     print("🚀🔥Fire Away🔥🚀")
+                                    
+                                    # Send file data
+                                    # sendfile(filesize, response[1], send_socket)
+
+                                    progress = tqdm.tqdm(range(filesize), f"Sending {response[1]}", unit="B", unit_scale=True, unit_divisor=1024)
+                                    with open (response[1], 'rb') as source:
+                                        while(True):
+                                            # read the bytes from the file
+                                            bytes_read = source.read(BUFFER_SIZE)
+                                            if not bytes_read:
+                                                # file transmitting is done
+                                                break
+                                            # we use sendall to assure transimission in 
+                                            # busy networks
+                                            send_socket.sendall(bytes_read)
+                                            # update the progress bar
+                                            progress.update(len(bytes_read))
+                                    send_socket.close()
+
+
                                     data = ''
                                 except:
                                     Exception
+                        else:
+                            pass
             listener.close()
-                                
+
+        def sendfile(self, filesize, filename, sending_socket):
+            progress = tqdm.tqdm(range(filesize), f"Sending {filename}", unit="B", unit_scale=True, unit_divisor=1024)
+            with open (filename, 'rb') as source:
+                while(True):
+                    # read the bytes from the file
+                    bytes_read = source.read(BUFFER_SIZE)
+                    if not bytes_read:
+                        # file transmitting is done
+                        break
+                    # we use sendall to assure transimission in 
+                    # busy networks
+                    sending_socket.sendall(bytes_read)
+                    # update the progress bar
+                    progress.update(len(bytes_read))
+            sending_socket.close()
 
     class ChatListener(threading.Thread):
 
@@ -148,11 +243,11 @@ def main():
             # Set the ip and port
             listen_socket.bind(('', self.port))
             hostname = socket.gethostname()   
-            IPAddr = socket.gethostbyname(hostname) 
-            listen_socket.listen(5)
-
+            IPAddr = socket.gethostbyname(hostname)
             welcome_note = BroadcastSender("CHECK {} {} {}".format(unique_id, IPAddr ,self.port))
-            welcome_note.start()
+            welcome_note.start() 
+            listen_socket.listen(5)
+            
             
             while True:
 
@@ -185,6 +280,61 @@ def main():
                             print("❕ Adding to peer table ❕")
                             # Add client to peer table
                             self.addpeer(tokens[1])
+                    elif tokens[0] == "here":
+                        if len(tokens) == 4:
+                            print("❕ Sending all files to {} ❕".format(tokens[1]))
+
+                            for piece in files[unique_id]:
+                                # Create socket to send the files
+                                send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                send_socket.connect((tokens[2], int(tokens[3])))                              
+                                # Send file details
+                                filesize = os.path.getsize(piece)
+                                message = "FILE {} {} {}".format(piece, filesize, unique_id)
+                                try:
+                                    send_socket.sendall(bytes(message, 'utf-8'))
+                                    print("🚀🔥Fire Away🔥🚀")
+
+                                    # Send file data
+                                    # sendfile(filesize, piece, send_socket)
+
+                                    progress = tqdm.tqdm(range(filesize), f"Sending {piece}", unit="B", unit_scale=True, unit_divisor=1024)
+                                    with open (piece, 'rb') as source:
+                                        while(True):
+                                            # read the bytes from the file
+                                            bytes_read = source.read(BUFFER_SIZE)
+                                            if not bytes_read:
+                                                # file transmitting is done
+                                                break
+                                            # we use sendall to assure transimission in 
+                                            # busy networks
+                                            send_socket.sendall(bytes_read)
+                                            # update the progress bar
+                                            progress.update(len(bytes_read))
+                                    send_socket.close()
+
+                                    data = ''
+                                except:
+                                    Exception
+
+                    elif tokens[0] == "file":
+                        if len(tokens) == 4:
+                            progress = tqdm.tqdm(range(int(tokens[2])), f"Receiving {tokens[1]}", unit="B", unit_scale=True, unit_divisor=1024)
+                            with open(tokens[1], "wb") as dest:
+                                while True:
+                                    # read 1024 bytes from the socket (receive)
+                                    bytes_read = clientsock.recv(BUFFER_SIZE)
+                                    if not bytes_read:    
+                                        # nothing is received
+                                        # file transmitting is done
+                                        break
+                                    # write to the file the bytes we just received
+                                    dest.write(bytes_read)
+                                    # update the progress bar
+                                    progress.update(len(bytes_read))
+                            
+                            self.addfile(tokens[3], tokens[1])
+
                     else:
                         print(clientsock.getpeername(), "::: ", buffer)
                 else:
@@ -193,17 +343,39 @@ def main():
             clientsock.close()
 
         def addpeer(self, uuid):
-            resp, index = peer_table._search(uuid)
-            if index == -1:
+            if uuid in peer_table:
+                resp = True
+            else:
+                resp = False
+
+            if len(peer_table) == MAX_PEERS:
                 print("❕ Peer Table Full ❕")
             else:
                 if resp:
-                    # print("❕ Peer Already Exists ❕")
+                    print("❕ Peer Already Exists ❕")
                     # Send files back
                     pass
                 else:
-                    peer_table.insert(uuid, "No files")
-                    print("✔️ Peer added ✔️")
+                    if uuid != unique_id:
+                        peer_table.append(uuid)
+                        print("✔️ Peer added ✔️")
+
+        def addfile(self, uuid, filename):
+            if filename in files.values():
+                resp = True
+            else:
+                resp = False
+
+            if resp:
+                print("❕ File Already Exists ❕")
+            else:
+                if uuid in files.keys():
+                    files[uuid].append(filename)
+                    print("✔️ File added ✔️")
+                else:
+                    files[uuid] = []
+                    files[uuid].append(filename)
+                    print("✔️ File added ✔️")
                 
 
     class ChatSender(threading.Thread):
@@ -227,15 +399,30 @@ def main():
                 if message != "":
                     tokens = message.lower().split()
                     if message.lower() == "quit":
-                        
+                        if not peer_table:
+                            print("❕ No successor to connect to ❕")
+                        else:
+                            if unique_id in files.keys():
+                                welcome_note = BroadcastSender("APPEAR {} {} {}".format(peer_table[0], IPAddr , MYPORT))
+                                welcome_note.start()
+                            else:
+                                print("❕ No files to send to successor ❕")
+
                         break
+                    elif message.lower() == "show files":
+                        pretty = json.dumps(files, indent=4, sort_keys=True)
+                        print(pretty)
+
+                    elif message.lower() == "show peers":
+                        print(peer_table)
+
                     elif tokens[0] == "search":
                         if len(tokens) == 2:
                             welcome_note = BroadcastSender("SEARCH {} {} {}".format(tokens[1], IPAddr , MYPORT))
                             welcome_note.start()
                     elif tokens[0] == "add":
-                        if len(tokens) == 3:
-                            self.addfile(tokens[1], tokens[2])
+                        if len(tokens) == 2:
+                            self.addfile(unique_id, tokens[1])
                     else:
                         try:
                             send_socket.sendall(bytes(message, 'utf-8'))
@@ -247,15 +434,21 @@ def main():
             running = 0
             return
 
-        def addfile(self, filename, filepath):
-            resp, index = files._search(filename)
-            if index == -1:
-                print("❕ Table Full ❕")
+        def addfile(self, uuid, filename):
+            if filename in files.values():
+                resp = True
             else:
-                if resp:
-                    print("❕ File Already Exists ❕")
+                resp = False
+
+            if resp:
+                print("❕ File Already Exists ❕")
+            else:
+                if uuid in files.keys():
+                    files[uuid].append(filename)
+                    print("✔️ File added ✔️")
                 else:
-                    files.insert(filename, filepath)
+                    files[uuid] = []
+                    files[uuid].append(filename)
                     print("✔️ File added ✔️")
     
 
