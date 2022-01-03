@@ -3,3 +3,9 @@ config.ini
 
 # Do not upload pycache
 __pycache__
+
+# Don't push txt files added
+*.txt
+
+# Do not ignore requirements.txt
+!requirements.txt
